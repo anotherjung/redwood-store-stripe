@@ -1,43 +1,42 @@
-import styled from 'styled-components'
+import { User } from 'react-feather'
 
-import { routes } from '@redwoodjs/router'
 import { useAuth } from '@redwoodjs/auth'
-import { toast } from '@redwoodjs/web/toast'
+import { routes } from '@redwoodjs/router'
 import { useMutation } from '@redwoodjs/web'
+import { toast } from '@redwoodjs/web/toast'
 
 import Button from 'src/components/Button'
 
-const AuthButton = () => {
+const AuthButton = (props) => {
   const { isAuthenticated, logOut, currentUser } = useAuth()
-
-  const [portal] = useMutation(
-    gql`
-      mutation Portal($userId: ID!) {
-        portal(userId: $userId) {
-          url
-        }
-      }
-    `
-  )
 
   const onLogoutButtonClick = async () => {
     await logOut()
     toast.success("You've been successfully logged out")
   }
 
+  const [createBillingPortalSession] = useMutation(
+    gql`
+      mutation CreateBillingPortalSession($userId: ID!) {
+        createBillingPortalSession(userId: $userId) {
+          url
+        }
+      }
+    `
+  )
+
+  // Create a billing portal session for the current user.
   const onUserButtonClick = async () => {
-    // create portal session to get temp url
-    const session = currentUser
     try {
       const {
         data: {
-          portal: { url },
+          createPortal: { url },
         },
-      } = await portal({
-        variables: { userId: session.id },
+      } = await createBillingPortalSession({
+        variables: { userId: currentUser.id },
       })
-      // redirect user to Stripe customer portal
-      window.location.replace(url)
+
+      window.location.assign(url)
     } catch (e) {
       toast.error("Couldn't create a session at this time")
     }
@@ -47,25 +46,20 @@ const AuthButton = () => {
     <>
       {isAuthenticated ? (
         <>
-          <Button onClick={onLogoutButtonClick}>Log Out</Button>
-          <Button onClick={onUserButtonClick} icon="user" />
+          <Button onClick={onLogoutButtonClick} {...props}>
+            Log out
+          </Button>
+          <Button variant="icon" onClick={onUserButtonClick} {...props}>
+            <User style={{ color: 'var(--primary)' }} />
+          </Button>
         </>
       ) : (
-        <Button to={routes.login()}>Log In</Button>
+        <Button variant="link" to={routes.login()} {...props}>
+          Log in
+        </Button>
       )}
-      <HLine />
     </>
   )
 }
 
 export default AuthButton
-
-// Styles
-const HLine = styled.div`
-  width: 1px;
-  height: var(--size-5);
-  background-color: var(--gray-6);
-
-  display: flex;
-  align-self: center;
-`
